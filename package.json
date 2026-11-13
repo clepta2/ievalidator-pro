@@ -1,0 +1,37 @@
+{
+  "name": "ievalidator-pro",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SDK e API Oficial de Validação e Formatação de Inscrição Estadual (IE) dos 27 Estados do Brasil (SINTEGRA / CONFAZ) na Cloudflare Edge Anycast (<1ms).",
+  "main": "ievalidator-pro.js",
+  "module": "ievalidator-pro.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "test": "node test.js",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "inscricao-estadual",
+    "ie-validator",
+    "sintegra",
+    "confaz",
+    "sefaz",
+    "nfe",
+    "nfce",
+    "fiscal",
+    "icms",
+    "cloudflare-worker",
+    "edge-computing",
+    "sdk"
+  ],
+  "author": "clepta2 <clepta2@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clepta2/ievalidator-pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clepta2/ievalidator-pro/issues"
+  },
+  "homepage": "https://github.com/clepta2/ievalidator-pro#readme"
+}
