@@ -40,8 +40,21 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    const authHeader = request.headers.get('Authorization') || request.headers.get('x-api-key') || '';
+    const cleanKey = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const isPro = Boolean(
+      cleanKey && (
+        cleanKey.startsWith('ie_live_') || 
+        cleanKey.startsWith('ie_pro_') || 
+        cleanKey.startsWith('ie_master_') || 
+        cleanKey.startsWith('pnt_live_') ||
+        (env && (env.API_KEY === cleanKey || env.PRO_KEY === cleanKey))
+      ) && cleanKey.length >= 16
+    );
+
     const ip = request.headers.get('cf-connecting-ip') || 'anon';
-    const rate = checkRateLimit(ip, 60);
+    const maxReqs = isPro ? 300 : 60;
+    const rate = checkRateLimit(isPro ? cleanKey : ip, maxReqs);
     const TELEMETRY = {
       ...CORS_HEADERS,
       'x-ie-ratelimit-remaining': String(rate.remaining)
