@@ -43,4 +43,13 @@ const resEstados = await worker.fetch(new Request('https://api.test/api/ie/estad
 const bodyEstados = await resEstados.json();
 assert(bodyEstados.totalEstados === 27, 'Catálogo lista exatamente os 27 Estados');
 
+// 7. Teste de Puxar Inscrições Estaduais por CNPJ
+console.log('  Testing puxar IE por CNPJ...');
+const resPuxar = await worker.fetch(new Request('https://api.test/api/ie/consultar?cnpj=47960950000121'));
+assert(resPuxar.status === 200, 'Endpoint /api/ie/consultar responde 200 OK');
+const bodyPuxar = await resPuxar.json();
+assert(bodyPuxar.ok === true, 'Puxa IEs da SEFAZ com sucesso');
+assert(bodyPuxar.totalIesEncontradas >= 2, 'Encontra múltiplas IEs da Magazine Luiza');
+assert(bodyPuxar.inscricoesEstaduais.some(i => i.uf === 'SP'), 'Encontra IE de São Paulo');
+
 console.log(`\n🎉 Todos os ${pass} testes do IEValidator Pro passaram com sucesso!`);

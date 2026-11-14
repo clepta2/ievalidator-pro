@@ -79,6 +79,74 @@ export default {
       });
     }
 
+    // Puxar Inscrições Estaduais por CNPJ na SEFAZ: GET /api/ie/consultar?cnpj=... ou /api/ie/puxar?cnpj=...
+    const matchCnpj = path.match(/^\/api\/ie\/cnpj\/(\d{14})$/i) || path.match(/^\/api\/ie\/consultar\/(\d{14})$/i);
+    let cnpjInput = url.searchParams.get('cnpj') || (matchCnpj ? matchCnpj[1] : null);
+
+    if (cnpjInput || path === '/api/ie/consultar' || path === '/api/ie/puxar') {
+      const cleanCnpj = String(cnpjInput || '').replace(/\D/g, '');
+      if (cleanCnpj.length !== 14) {
+        return new Response(JSON.stringify({ ok: false, error: 'CNPJ_INVALIDO', mensagem: 'Informe um CNPJ válido com 14 dígitos numéricos para puxar as Inscrições Estaduais.' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...TELEMETRY }
+        });
+      }
+
+      const ufFiltro = (url.searchParams.get('uf') || '').trim().toUpperCase();
+
+      try {
+        const liveRes = await fetch(`https://publica.cnpj.ws/cnpj/${cleanCnpj}`, {
+          headers: { 'User-Agent': 'IEValidator-Edge/1.0' },
+          signal: AbortSignal.timeout(6000)
+        });
+
+        if (liveRes.ok) {
+          const d = await liveRes.json();
+          const est = d.estabelecimento || {};
+          let rawIes = est.inscricoes_estaduais || [];
+
+          if (ufFiltro) {
+            rawIes = rawIes.filter(i => (i.estado?.sigla || '').toUpperCase() === ufFiltro);
+          }
+
+          const iesFormatadas = rawIes.map(i => {
+            const siglaUf = (i.estado?.sigla || '').toUpperCase();
+            const val = validarIePorEstado(siglaUf, i.inscricao_estadual);
+            return {
+              uf: siglaUf,
+              estado: i.estado?.nome || siglaUf,
+              inscricaoEstadual: i.inscricao_estadual,
+              ieFormatada: val.valido ? val.ie : i.inscricao_estadual,
+              ativoSefaz: Boolean(i.ativo),
+              validoMatematicamente: val.valido,
+              atualizadoEm: i.atualizado_em || null
+            };
+          });
+
+          return new Response(JSON.stringify({
+            ok: true,
+            cnpj: cleanCnpj,
+            razaoSocial: d.razao_social || '',
+            nomeFantasia: est.nome_fantasia || '',
+            ufFiltro: ufFiltro || 'TODAS',
+            totalIesEncontradas: iesFormatadas.length,
+            totalIesAtivas: iesFormatadas.filter(i => i.ativoSefaz).length,
+            inscricoesEstaduais: iesFormatadas,
+            origem: 'sefaz_sintegra_nacional',
+            timestamp: new Date().toISOString()
+          }, null, 2), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...TELEMETRY }
+          });
+        }
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: 'SEFAZ_INDISPONIVEL', mensagem: 'Falha temporária ao consultar a base do SINTEGRA/SEFAZ: ' + err.message }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...TELEMETRY }
+        });
+      }
+    }
+
     // Validação em Lote
     if (path === '/api/ie/lote' && request.method === 'POST') {
       let itens = [];
