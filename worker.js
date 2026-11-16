@@ -13,7 +13,11 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
-  'Access-Control-Max-Age': '86400'
+  'Access-Control-Max-Age': '86400',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-Ponte-Version': '3.0.0'
 };
 
 const rateLimitBuckets = new Map();
@@ -67,6 +71,24 @@ export default {
       });
     }
 
+    // Healthcheck Oficial Anycast
+    if (path === '/health' || path === '/status') {
+      return new Response(JSON.stringify({
+        ok: true,
+        service: 'IEValidator Pro API',
+        cluster: 'Cloudflare Edge Anycast',
+        version: env?.API_VERSION || '1.0.0',
+        status: 'online',
+        autenticado: isPro,
+        totalEstados: 27,
+        padrao: 'SINTEGRA / CONFAZ Oficial',
+        timestamp: new Date().toISOString()
+      }, null, 2), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...TELEMETRY }
+      });
+    }
+
     // Listagem de Estados
     if (path === '/api/ie/estados' || path === '/estados') {
       return new Response(JSON.stringify({
@@ -75,7 +97,7 @@ export default {
         estados: ESTADOS_IE
       }, null, 2), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', ...TELEMETRY }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400, s-maxage=86400', ...TELEMETRY }
       });
     }
 
