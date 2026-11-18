@@ -116,26 +116,35 @@ export default {
 
       const ufFiltro = (url.searchParams.get('uf') || '').trim().toUpperCase();
 
-      // Mock determinístico soberano para testes e resiliência offline
-      const MOCK_IES = {
-        '47960950000121': [
-          { estado: { sigla: 'SP', nome: 'São Paulo' }, inscricao_estadual: '110042490114', ativo: true },
-          { estado: { sigla: 'MG', nome: 'Minas Gerais' }, inscricao_estadual: '0623079040081', ativo: true }
-        ],
-        '33000167000101': [
-          { estado: { sigla: 'RJ', nome: 'Rio de Janeiro' }, inscricao_estadual: '81745778', ativo: true }
-        ]
+      // Casos de referência para testes locais e resiliência offline
+      const REFERENCIA_IES = {
+        '47960950000121': {
+          razaoSocial: 'MAGAZINE LUIZA S/A',
+          nomeFantasia: 'MAGALU',
+          ies: [
+            { estado: { sigla: 'SP', nome: 'São Paulo' }, inscricao_estadual: '110042490114', ativo: true },
+            { estado: { sigla: 'MG', nome: 'Minas Gerais' }, inscricao_estadual: '0623079040081', ativo: true }
+          ]
+        },
+        '33000167000101': {
+          razaoSocial: 'PETROLEO BRASILEIRO S.A. - PETROBRAS',
+          nomeFantasia: 'PETROBRAS',
+          ies: [
+            { estado: { sigla: 'RJ', nome: 'Rio de Janeiro' }, inscricao_estadual: '81745778', ativo: true }
+          ]
+        }
       };
 
       try {
-        let rawIes = MOCK_IES[cleanCnpj] || null;
-        let razaoSocial = 'MAGAZINE LUIZA S/A';
-        let nomeFantasia = 'MAGALU';
+        let rawIes = null;
+        let razaoSocial = '';
+        let nomeFantasia = '';
+        let fonteOrigem = 'sefaz_cnpj_ws';
 
-        if (!rawIes) {
+        try {
           const liveRes = await fetch(`https://publica.cnpj.ws/cnpj/${cleanCnpj}`, {
             headers: { 'User-Agent': 'IEValidator-Edge/1.0' },
-            signal: AbortSignal.timeout(4000)
+            signal: AbortSignal.timeout(3500)
           });
           if (liveRes.ok) {
             const d = await liveRes.json();
@@ -144,6 +153,14 @@ export default {
             razaoSocial = d.razao_social || '';
             nomeFantasia = est.nome_fantasia || '';
           }
+        } catch (_) {}
+
+        if (!rawIes && REFERENCIA_IES[cleanCnpj]) {
+          const ref = REFERENCIA_IES[cleanCnpj];
+          rawIes = ref.ies;
+          razaoSocial = ref.razaoSocial;
+          nomeFantasia = ref.nomeFantasia;
+          fonteOrigem = 'referencia_homologacao';
         }
 
         if (rawIes) {
